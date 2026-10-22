@@ -76,8 +76,14 @@ export function createApp() {
   });
 
   // 9. Serve Frontend if built
-  const webDistPath = path.resolve('apps/web/dist');
-  if (fs.existsSync(webDistPath)) {
+  const possibleDistPaths = [
+    path.resolve(process.cwd(), 'apps/web/dist'),
+    path.resolve(process.cwd(), '../web/dist'),
+    path.resolve(process.cwd(), 'dist/web'),
+    path.resolve('apps/web/dist'),
+  ];
+  const webDistPath = possibleDistPaths.find((p) => fs.existsSync(p));
+  if (webDistPath) {
     app.use(express.static(webDistPath));
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api')) {
@@ -86,6 +92,7 @@ export function createApp() {
       res.sendFile(path.join(webDistPath, 'index.html'));
     });
   }
+
 
 
   // 9. 404 Handler

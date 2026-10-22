@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: trustvault
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: true
+      - key: SESSION_IDLE_TIMEOUT_MINUTES
+        value: 30
+      - key: SESSION_ABSOLUTE_TIMEOUT_HOURS
+        value: 12

@@ -43,17 +43,22 @@ export const corsMiddleware = cors({
       'http://127.0.0.1:5173',
     ];
 
-    const isAllowedTunnel =
+    const isAllowedCloudOrTunnel =
+      origin.endsWith('.onrender.com') ||
+      origin.endsWith('.railway.app') ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.fly.dev') ||
       origin.endsWith('.loca.lt') ||
       origin.endsWith('.trycloudflare.com') ||
       origin.endsWith('.ngrok-free.app') ||
       origin.endsWith('.ngrok.io');
 
-    if (allowedOrigins.includes(origin) || isAllowedTunnel) {
+    if (allowedOrigins.includes(origin) || isAllowedCloudOrTunnel) {
       callback(null, true);
     } else {
       callback(new Error('CORS request rejected: Origin not allowed'));
     }
+
 
   },
   credentials: true,
