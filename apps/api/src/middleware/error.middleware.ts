@@ -37,12 +37,23 @@ export function errorHandler(
   }
 
   // Handle Payload Too Large
-  if (err.type === 'entity.too.large') {
+  if (err.type === 'entity.too.large' || (err.name === 'MulterError' && err.code === 'LIMIT_FILE_SIZE')) {
     res.status(413).json({
       success: false,
       error: {
         code: 'PAYLOAD_TOO_LARGE',
         message: 'Request entity exceeds allowed size limit',
+      },
+    });
+    return;
+  }
+
+  if (err.name === 'MulterError') {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'UPLOAD_ERROR',
+        message: err.message,
       },
     });
     return;

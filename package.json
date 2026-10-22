@@ -16,7 +16,8 @@
     "test:security": "vitest run tests/security",
     "test:integration": "vitest run tests/integration",
     "migrate": "tsx database/migrate.ts",
-    "seed": "tsx database/seed.ts"
+    "seed": "tsx database/seed.ts",
+    "mutation-test": "tsx scripts/mutation-test.ts"
   },
   "devDependencies": {
     "@types/multer": "^2.3.0",

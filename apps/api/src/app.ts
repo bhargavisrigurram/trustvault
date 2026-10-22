@@ -1,5 +1,7 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import fs from 'node:fs';
+import path from 'node:path';
 import { securityHeaders, corsMiddleware } from './middleware/security.middleware.js';
 import { authenticate, csrfProtection } from './middleware/auth.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
@@ -8,6 +10,7 @@ import { documentRoutes } from './modules/documents/document.routes.js';
 import { sharingRoutes } from './modules/sharing/sharing.routes.js';
 import { auditRoutes } from './modules/audit/audit.routes.js';
 import { getDb } from './db/index.js';
+import { config } from './config/index.js';
 
 export function createApp() {
   const app = express();
@@ -57,7 +60,30 @@ export function createApp() {
   app.use('/api/documents', documentRoutes);
   app.use('/api/admin/audit', auditRoutes);
 
-  // 8. 404 Handler
+  // 8. Explicitly block direct access to internal and storage paths
+  app.use(['/storage', '/uploads', '/database', '/scripts', '/tests'], (_req, res) => {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'The requested resource was not found',
+      },
+    });
+  });
+
+  // 9. Serve Frontend in Production if built and in production environment
+  const webDistPath = path.resolve('apps/web/dist');
+  if (config.env === 'production' && fs.existsSync(webDistPath)) {
+    app.use(express.static(webDistPath));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
+      res.sendFile(path.join(webDistPath, 'index.html'));
+    });
+  }
+
+  // 9. 404 Handler
   app.use((_req, res) => {
     res.status(404).json({
       success: false,
@@ -68,7 +94,7 @@ export function createApp() {
     });
   });
 
-  // 9. Centralized Error Handler
+  // 10. Centralized Error Handler
   app.use(errorHandler);
 
   return app;
