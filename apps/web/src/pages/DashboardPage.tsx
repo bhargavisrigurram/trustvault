@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { UploadModal } from '../components/UploadModal';
 import { VersionHistoryModal } from '../components/VersionHistoryModal';
 import { ShareModal } from '../components/ShareModal';
+import { DocumentDetailsModal } from '../components/DocumentDetailsModal';
 import {
   FileText,
   UploadCloud,
@@ -16,6 +17,10 @@ import {
   Clock,
   User,
   Shield,
+  ShieldCheck,
+  CheckCircle2,
+  Lock,
+  Eye,
   FileSpreadsheet,
   FileImage,
   FileCode,
@@ -24,6 +29,7 @@ import type { DocumentSearchItem, DocumentSearchFacets } from '@trustvault/share
 
 export const DashboardPage: React.FC = () => {
   const { isOwner } = useAuth();
+
 
   // Search & Filter state
   const [scope, setScope] = useState<'all' | 'owned' | 'shared' | 'trash'>('all');
@@ -44,6 +50,7 @@ export const DashboardPage: React.FC = () => {
   const [historyDocId, setHistoryDocId] = useState<string | null>(null);
   const [historyCanEdit, setHistoryCanEdit] = useState(false);
   const [shareDocId, setShareDocId] = useState<string | null>(null);
+  const [selectedDocForDetails, setSelectedDocForDetails] = useState<DocumentSearchItem | null>(null);
 
   const fetchDocuments = async () => {
     setLoading(true);
@@ -132,11 +139,17 @@ export const DashboardPage: React.FC = () => {
       {/* Top Banner & Primary Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center space-x-2">
-            <span>Encrypted Document Vault</span>
-          </h1>
+          <div className="flex items-center space-x-2">
+            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center space-x-2">
+              <span>Encrypted Document Vault</span>
+            </h1>
+            <span className="hidden sm:inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-[10px] font-mono font-bold text-emerald-400">
+              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+              <span>AES-256 GCM INVARIANTS</span>
+            </span>
+          </div>
           <p className="text-sm text-slate-400 mt-1">
-            Zero-knowledge document storage protected by mandatory central authorization
+            Zero-knowledge document storage protected by mandatory central authorization and SHA-256 fingerprinting
           </p>
         </div>
 
@@ -150,6 +163,49 @@ export const DashboardPage: React.FC = () => {
             <span>Store Document</span>
           </button>
         )}
+      </div>
+
+      {/* Enterprise Security Guarantees Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="px-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center space-x-3">
+          <div className="p-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800/50 text-emerald-400">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-[11px] font-bold text-white uppercase tracking-wider">Zero-Trust Auth</div>
+            <div className="text-[10px] text-slate-400 font-mono">Centralized Gates</div>
+          </div>
+        </div>
+
+        <div className="px-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center space-x-3">
+          <div className="p-1.5 rounded-lg bg-teal-950/60 border border-teal-800/50 text-teal-400">
+            <Shield className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-[11px] font-bold text-white uppercase tracking-wider">404 Concealment</div>
+            <div className="text-[10px] text-slate-400 font-mono">Anti-IDOR Probing</div>
+          </div>
+        </div>
+
+        <div className="px-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center space-x-3">
+          <div className="p-1.5 rounded-lg bg-indigo-950/60 border border-indigo-800/50 text-indigo-400">
+            <Lock className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-[11px] font-bold text-white uppercase tracking-wider">SHA-256 CAS</div>
+            <div className="text-[10px] text-slate-400 font-mono">Deduplicated Blobs</div>
+          </div>
+        </div>
+
+        <div className="px-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center space-x-3">
+          <div className="p-1.5 rounded-lg bg-purple-950/60 border border-purple-800/50 text-purple-400">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="text-[11px] font-bold text-white uppercase tracking-wider">Append-Only Audit</div>
+            <div className="text-[10px] text-slate-400 font-mono">Tamper-Evident Chain</div>
+          </div>
+        </div>
       </div>
 
       {/* Scope Navigation Tabs */}
@@ -404,6 +460,15 @@ export const DashboardPage: React.FC = () => {
                         </button>
 
                         <button
+                          id={`btn-inspect-${doc.id}`}
+                          onClick={() => setSelectedDocForDetails(doc)}
+                          title="Cryptographic Fingerprint & Security Invariants"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-slate-800 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+
+                        <button
                           id={`btn-history-${doc.id}`}
                           onClick={() => {
                             setHistoryDocId(doc.id);
@@ -467,6 +532,38 @@ export const DashboardPage: React.FC = () => {
         isOpen={Boolean(shareDocId)}
         onClose={() => setShareDocId(null)}
       />
+
+      {selectedDocForDetails && (
+        <DocumentDetailsModal
+          document={selectedDocForDetails}
+          isOpen={Boolean(selectedDocForDetails)}
+          onClose={() => setSelectedDocForDetails(null)}
+          onDownload={async (docId) => {
+            try {
+              const { token } = await api.issueDownloadToken(docId);
+              window.open(api.getDownloadUrl(token), '_blank');
+            } catch (err: any) {
+              alert(err.message || 'Download failed');
+            }
+          }}
+          onOpenShare={(docId) => setShareDocId(docId)}
+          onOpenHistory={(docId, canEdit) => {
+            setHistoryDocId(docId);
+            setHistoryCanEdit(canEdit);
+          }}
+          onDelete={async (docId, title) => {
+            if (!confirm(`Are you sure you want to move "${title}" to trash?`)) return;
+            try {
+              await api.deleteDocument(docId);
+              setSelectedDocForDetails(null);
+              await fetchDocuments();
+            } catch (err: any) {
+              alert(err.message || 'Failed to delete document');
+            }
+          }}
+          isOwner={selectedDocForDetails.effective_permission === 'owner'}
+        />
+      )}
     </div>
   );
 };

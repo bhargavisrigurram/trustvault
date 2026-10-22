@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 font-sans;
+    @apply bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-950;
   }
 }
 
@@ -16,14 +16,38 @@
   border: 1px solid rgba(51, 65, 85, 0.4);
 }
 
+.glass-panel-glow {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.15);
+}
+
 .glass-panel-hover {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel-hover:hover {
-  border-color: rgba(16, 185, 129, 0.4);
-  box-shadow: 0 8px 32px -4px rgba(16, 185, 129, 0.12);
-  transform: translateY(-1px);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 12px 36px -4px rgba(16, 185, 129, 0.18);
+  transform: translateY(-2px);
+}
+
+/* Cyber Security Grid & Glow Backgrounds */
+.bg-cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(51, 65, 85, 0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(51, 65, 85, 0.15) 1px, transparent 1px);
+}
+
+.bg-radial-hero {
+  background: radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.12) 0%, rgba(13, 148, 136, 0.05) 35%, transparent 70%);
+}
+
+.bg-radial-card {
+  background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
 }
 
 /* Custom Scrollbar */
@@ -33,7 +57,7 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(15, 23, 42, 0.6);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -48,4 +72,17 @@
 /* Monospace text for Hashes & Checksums */
 .font-mono-code {
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* Animated Gradient Text */
+.text-gradient-emerald {
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #34d399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-accent {
+  background: linear-gradient(135deg, #34d399 0%, #2dd4bf 50%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
