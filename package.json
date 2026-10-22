@@ -1,0 +1,27 @@
+{
+  "name": "trustvault",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure document-sharing platform with central authorization, server-side sessions, and audit verification",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:security": "vitest run tests/security",
+    "test:integration": "vitest run tests/integration",
+    "migrate": "tsx database/migrate.ts",
+    "seed": "tsx database/seed.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
+  }
+}
