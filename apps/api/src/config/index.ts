@@ -5,9 +5,9 @@ dotenv.config();
 
 export const config = {
   env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '4000', 10),
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
-  apiUrl: process.env.API_URL || 'http://localhost:4000',
+  port: parseInt(process.env.PORT || '3000', 10),
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  apiUrl: process.env.API_URL || 'http://localhost:3000',
 
   session: {
     secret: process.env.SESSION_SECRET || 'dev-secret-minimum-32-characters-required-for-vault',
