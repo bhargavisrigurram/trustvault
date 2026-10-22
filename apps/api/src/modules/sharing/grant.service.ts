@@ -1,9 +1,10 @@
 import { GrantRepository, GrantWithUser } from './grant.repository.js';
 import { DocumentRepository } from '../documents/document.repository.js';
 import { UserRepository } from '../users/user.repository.js';
+import { AuditService } from '../audit/audit.service.js';
 import { authorize } from '../authorization/index.js';
 import { transaction } from '../../db/index.js';
-import { DocumentAction } from '@trustvault/shared';
+import { DocumentAction, AuditEventType, AuditOutcome } from '@trustvault/shared';
 import type { User, DocumentGrant, GrantPermissionType } from '@trustvault/shared';
 
 export interface GrantServiceResult<T> {
@@ -18,7 +19,8 @@ export class GrantService {
   constructor(
     private grantRepo: GrantRepository = new GrantRepository(),
     private docRepo: DocumentRepository = new DocumentRepository(),
-    private userRepo: UserRepository = new UserRepository()
+    private userRepo: UserRepository = new UserRepository(),
+    private auditService: AuditService = new AuditService()
   ) {}
 
   /**
@@ -46,6 +48,19 @@ export class GrantService {
     // Central authorization rule: only authorized users (owners) can share
     const authRes = await authorize(user, doc, DocumentAction.SHARE);
     if (!authRes.allowed) {
+      await this.auditService.recordEvent({
+        eventType: AuditEventType.ACCESS_DENIED,
+        actorId: user.id,
+        actorUsername: user.username,
+        targetType: 'document',
+        targetId: documentId,
+        outcome: AuditOutcome.DENIED,
+        details: {
+          action: DocumentAction.SHARE,
+          reason: authRes.reason,
+        },
+      });
+
       return {
         success: false,
         statusCode: authRes.statusCode || 404,
@@ -97,6 +112,22 @@ export class GrantService {
       expiresAt,
     });
 
+    await this.auditService.recordEvent({
+      eventType: AuditEventType.GRANT_CREATE,
+      actorId: user.id,
+      actorUsername: user.username,
+      targetType: 'grant',
+      targetId: grant.id,
+      outcome: AuditOutcome.SUCCESS,
+      details: {
+        documentId: doc.id,
+        granteeId: grantee.id,
+        granteeUsername: grantee.username,
+        permission: data.permission,
+        expiresAt: expiresAt?.toISOString() || null,
+      },
+    });
+
     return {
       success: true,
       data: grant,
@@ -124,6 +155,19 @@ export class GrantService {
     // Central authorization rule: only authorized users (owners) can revoke
     const authRes = await authorize(user, doc, DocumentAction.REVOKE);
     if (!authRes.allowed) {
+      await this.auditService.recordEvent({
+        eventType: AuditEventType.ACCESS_DENIED,
+        actorId: user.id,
+        actorUsername: user.username,
+        targetType: 'document',
+        targetId: documentId,
+        outcome: AuditOutcome.DENIED,
+        details: {
+          action: DocumentAction.REVOKE,
+          reason: authRes.reason,
+        },
+      });
+
       return {
         success: false,
         statusCode: authRes.statusCode || 404,
@@ -150,6 +194,19 @@ export class GrantService {
         await txGrantRepo.invalidateTokensForGrant(documentId, res.grantee_id);
       }
       return res;
+    });
+
+    await this.auditService.recordEvent({
+      eventType: AuditEventType.GRANT_REVOKE,
+      actorId: user.id,
+      actorUsername: user.username,
+      targetType: 'grant',
+      targetId: grantId,
+      outcome: AuditOutcome.SUCCESS,
+      details: {
+        documentId,
+        granteeId: existingGrant.grantee_id,
+      },
     });
 
     return {

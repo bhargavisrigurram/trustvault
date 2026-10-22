@@ -4,8 +4,9 @@ import { getDb, transaction, DbClient } from '../../db/index.js';
 import { DocumentRepository } from '../documents/document.repository.js';
 import { UserRepository } from '../users/user.repository.js';
 import { StorageService } from '../storage/storage.service.js';
+import { AuditService } from '../audit/audit.service.js';
 import { authorize } from '../authorization/index.js';
-import { DocumentAction } from '@trustvault/shared';
+import { DocumentAction, AuditEventType, AuditOutcome } from '@trustvault/shared';
 import type { User, DocumentVersion } from '@trustvault/shared';
 
 export interface TokenIssuanceResult {
@@ -33,7 +34,8 @@ export class DownloadTokenService {
   constructor(
     private docRepo: DocumentRepository = new DocumentRepository(),
     private userRepo: UserRepository = new UserRepository(),
-    private storageService: StorageService = new StorageService()
+    private storageService: StorageService = new StorageService(),
+    private auditService: AuditService = new AuditService()
   ) {}
 
   /**
@@ -57,6 +59,19 @@ export class DownloadTokenService {
     // Mandatory authorization check for download
     const authRes = await authorize(user, doc, DocumentAction.DOWNLOAD);
     if (!authRes.allowed) {
+      await this.auditService.recordEvent({
+        eventType: AuditEventType.ACCESS_DENIED,
+        actorId: user.id,
+        actorUsername: user.username,
+        targetType: 'document',
+        targetId: documentId,
+        outcome: AuditOutcome.DENIED,
+        details: {
+          action: 'token_issue',
+          reason: authRes.reason,
+        },
+      });
+
       return {
         success: false,
         statusCode: authRes.statusCode || 404,
@@ -91,6 +106,19 @@ export class DownloadTokenService {
        VALUES ($1, $2, $3, $4, 'download', $5)`,
       [tokenHash, user.id, doc.id, version.id, expiresAt.toISOString()]
     );
+
+    await this.auditService.recordEvent({
+      eventType: AuditEventType.TOKEN_ISSUE,
+      actorId: user.id,
+      actorUsername: user.username,
+      targetType: 'document',
+      targetId: doc.id,
+      outcome: AuditOutcome.SUCCESS,
+      details: {
+        versionNumber: targetVerNum,
+        expiresAt: expiresAt.toISOString(),
+      },
+    });
 
     return {
       success: true,
@@ -151,6 +179,18 @@ export class DownloadTokenService {
         );
 
         if (checkRes.rows.length === 0) {
+          await this.auditService.recordEvent(
+            {
+              eventType: AuditEventType.TOKEN_REJECT,
+              actorId: requestingUser?.id || null,
+              actorUsername: requestingUser?.username || null,
+              targetType: 'download_token',
+              outcome: AuditOutcome.FAILURE,
+              details: { reason: 'not_found' },
+            },
+            { client: txClient }
+          );
+
           return {
             success: false,
             statusCode: 404,
@@ -161,6 +201,18 @@ export class DownloadTokenService {
 
         const existing = checkRes.rows[0];
         if (existing.consumed_at) {
+          await this.auditService.recordEvent(
+            {
+              eventType: AuditEventType.TOKEN_REJECT,
+              actorId: requestingUser?.id || null,
+              actorUsername: requestingUser?.username || null,
+              targetType: 'download_token',
+              outcome: AuditOutcome.FAILURE,
+              details: { reason: 'already_consumed_replay' },
+            },
+            { client: txClient }
+          );
+
           return {
             success: false,
             statusCode: 410,
@@ -168,6 +220,18 @@ export class DownloadTokenService {
             errorMessage: 'Download token has already been consumed (replay attempt detected)',
           };
         }
+
+        await this.auditService.recordEvent(
+          {
+            eventType: AuditEventType.TOKEN_REJECT,
+            actorId: requestingUser?.id || null,
+            actorUsername: requestingUser?.username || null,
+            targetType: 'download_token',
+            outcome: AuditOutcome.FAILURE,
+            details: { reason: 'expired' },
+          },
+          { client: txClient }
+        );
 
         return {
           success: false,
@@ -180,6 +244,19 @@ export class DownloadTokenService {
       // 2. Cross-user redemption check:
       // If a requestingUser is authenticated, verify token was issued to that same user
       if (requestingUser && requestingUser.id !== tokenRecord.user_id) {
+        await this.auditService.recordEvent(
+          {
+            eventType: AuditEventType.ACCESS_DENIED,
+            actorId: requestingUser.id,
+            actorUsername: requestingUser.username,
+            targetType: 'download_token',
+            targetId: tokenRecord.id,
+            outcome: AuditOutcome.DENIED,
+            details: { reason: 'cross_user_redemption' },
+          },
+          { client: txClient }
+        );
+
         return {
           success: false,
           statusCode: 403,
@@ -191,6 +268,18 @@ export class DownloadTokenService {
       // 3. Resolve bound user and verify active status using txUserRepo
       const boundUser = await txUserRepo.findById(tokenRecord.user_id);
       if (!boundUser || !boundUser.is_active) {
+        await this.auditService.recordEvent(
+          {
+            eventType: AuditEventType.ACCESS_DENIED,
+            actorId: tokenRecord.user_id,
+            targetType: 'download_token',
+            targetId: tokenRecord.id,
+            outcome: AuditOutcome.DENIED,
+            details: { reason: 'user_disabled' },
+          },
+          { client: txClient }
+        );
+
         return {
           success: false,
           statusCode: 403,
@@ -214,6 +303,19 @@ export class DownloadTokenService {
       // If grant was revoked, authorize() will deny
       const authRes = await authorize(boundUser, doc, DocumentAction.DOWNLOAD, { client: txClient });
       if (!authRes.allowed) {
+        await this.auditService.recordEvent(
+          {
+            eventType: AuditEventType.ACCESS_DENIED,
+            actorId: boundUser.id,
+            actorUsername: boundUser.username,
+            targetType: 'document',
+            targetId: doc.id,
+            outcome: AuditOutcome.DENIED,
+            details: { reason: 'grant_revoked_at_linearization' },
+          },
+          { client: txClient }
+        );
+
         return {
           success: false,
           statusCode: 403,
@@ -238,6 +340,24 @@ export class DownloadTokenService {
           errorMessage: 'Document version not found',
         };
       }
+
+      // Record successful token redemption
+      await this.auditService.recordEvent(
+        {
+          eventType: AuditEventType.TOKEN_REDEEM,
+          actorId: boundUser.id,
+          actorUsername: boundUser.username,
+          targetType: 'download_token',
+          targetId: tokenRecord.id,
+          outcome: AuditOutcome.SUCCESS,
+          details: {
+            documentId: doc.id,
+            versionId: tokenRecord.version_id,
+            fileName: version.file_name,
+          },
+        },
+        { client: txClient }
+      );
 
       const stream = this.storageService.createReadStream(version.storage_key);
 

@@ -214,6 +214,58 @@ export const CreateDownloadTokenRequestSchema = z.object({
 
 export type CreateDownloadTokenRequest = z.infer<typeof CreateDownloadTokenRequestSchema>;
 
+// ==========================================
+// Audit Event Types & Schemas
+// ==========================================
+
+export const AuditEventType = {
+  AUTH_LOGIN_SUCCESS: 'auth.login.success',
+  AUTH_LOGIN_FAILURE: 'auth.login.failure',
+  AUTH_LOGOUT: 'auth.logout',
+  USER_LOCKED: 'user.locked',
+  DOCUMENT_CREATE: 'document.create',
+  DOCUMENT_DOWNLOAD: 'document.download',
+  DOCUMENT_EDIT: 'document.edit',
+  DOCUMENT_VERSION_CREATE: 'document.version.create',
+  DOCUMENT_DELETE: 'document.delete',
+  DOCUMENT_RECOVER: 'document.recover',
+  GRANT_CREATE: 'grant.create',
+  GRANT_REVOKE: 'grant.revoke',
+  ACCESS_DENIED: 'access.denied',
+  TOKEN_ISSUE: 'token.issue',
+  TOKEN_REDEEM: 'token.redeem',
+  TOKEN_REJECT: 'token.reject',
+  ADMIN_ACTION: 'admin.action',
+} as const;
+
+export type AuditEventTypeEnum = (typeof AuditEventType)[keyof typeof AuditEventType];
+
+export const AuditOutcome = {
+  SUCCESS: 'SUCCESS',
+  DENIED: 'DENIED',
+  FAILURE: 'FAILURE',
+} as const;
+
+export type AuditOutcomeType = (typeof AuditOutcome)[keyof typeof AuditOutcome];
+
+export const AuditRecordSchema = z.object({
+  id: z.coerce.number(),
+  sequence_number: z.coerce.number(),
+  timestamp: z.string().or(z.date()),
+  event_type: z.string(),
+  actor_id: z.string().uuid().nullable().optional(),
+  actor_username: z.string().nullable().optional(),
+  target_type: z.string().nullable().optional(),
+  target_id: z.string().nullable().optional(),
+  outcome: z.enum(['SUCCESS', 'DENIED', 'FAILURE']),
+  correlation_id: z.string(),
+  details: z.record(z.any()).nullable().optional(),
+  previous_hash: z.string().length(64),
+  current_hash: z.string().length(64),
+});
+
+export type AuditRecord = z.infer<typeof AuditRecordSchema>;
+
 /**
  * Sanitize filenames for display and storage metadata:
  * - Strip directory traversal characters (../, ..\, etc.)

@@ -2,9 +2,10 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { DocumentRepository } from './document.repository.js';
 import { StorageService } from '../storage/storage.service.js';
+import { AuditService } from '../audit/audit.service.js';
 import { authorize } from '../authorization/index.js';
 import { transaction } from '../../db/index.js';
-import { DocumentAction, sanitizeFilename } from '@trustvault/shared';
+import { DocumentAction, AuditEventType, AuditOutcome, sanitizeFilename } from '@trustvault/shared';
 import type { User, Document, DocumentVersion } from '@trustvault/shared';
 
 export interface ServiceResult<T> {
@@ -18,7 +19,8 @@ export interface ServiceResult<T> {
 export class DocumentService {
   constructor(
     private docRepo: DocumentRepository = new DocumentRepository(),
-    private storageService: StorageService = new StorageService()
+    private storageService: StorageService = new StorageService(),
+    private auditService: AuditService = new AuditService()
   ) {}
 
   /**
@@ -68,6 +70,27 @@ export class DocumentService {
           uploadedById: user.id,
         });
 
+        // Record audit event in transaction
+        await this.auditService.recordEvent(
+          {
+            eventType: AuditEventType.DOCUMENT_CREATE,
+            actorId: user.id,
+            actorUsername: user.username,
+            targetType: 'document',
+            targetId: doc.id,
+            outcome: AuditOutcome.SUCCESS,
+            details: {
+              title: doc.title,
+              category: doc.category,
+              fileName: safeFilename,
+              fileSize: inspection.size,
+              mimeType: inspection.detectedMime,
+              sha256Checksum: inspection.sha256Checksum,
+            },
+          },
+          { client: txClient }
+        );
+
         return { document: doc, version: ver };
       });
 
@@ -104,6 +127,19 @@ export class DocumentService {
     // Mandatory authorization boundary check
     const authRes = await authorize(user, docWithVer.document, DocumentAction.READ);
     if (!authRes.allowed) {
+      await this.auditService.recordEvent({
+        eventType: AuditEventType.ACCESS_DENIED,
+        actorId: user.id,
+        actorUsername: user.username,
+        targetType: 'document',
+        targetId: documentId,
+        outcome: AuditOutcome.DENIED,
+        details: {
+          action: DocumentAction.READ,
+          reason: authRes.reason,
+        },
+      });
+
       return {
         success: false,
         statusCode: authRes.statusCode || 404,
@@ -151,6 +187,19 @@ export class DocumentService {
     // Central authorization rule: download action
     const authRes = await authorize(user, doc, DocumentAction.DOWNLOAD);
     if (!authRes.allowed) {
+      await this.auditService.recordEvent({
+        eventType: AuditEventType.ACCESS_DENIED,
+        actorId: user.id,
+        actorUsername: user.username,
+        targetType: 'document',
+        targetId: documentId,
+        outcome: AuditOutcome.DENIED,
+        details: {
+          action: DocumentAction.DOWNLOAD,
+          reason: authRes.reason,
+        },
+      });
+
       return {
         success: false,
         statusCode: authRes.statusCode || 404,
@@ -171,6 +220,20 @@ export class DocumentService {
         errorMessage: 'Requested document version not found',
       };
     }
+
+    await this.auditService.recordEvent({
+      eventType: AuditEventType.DOCUMENT_DOWNLOAD,
+      actorId: user.id,
+      actorUsername: user.username,
+      targetType: 'document',
+      targetId: doc.id,
+      outcome: AuditOutcome.SUCCESS,
+      details: {
+        versionNumber: targetVerNum,
+        fileName: version.file_name,
+        mimeType: version.mime_type,
+      },
+    });
 
     const stream = this.storageService.createReadStream(version.storage_key);
 
@@ -213,6 +276,19 @@ export class DocumentService {
       const authRes = await authorize(user, doc, DocumentAction.VERSION);
       if (!authRes.allowed) {
         this.storageService.deleteTempFile(tempPath);
+        await this.auditService.recordEvent({
+          eventType: AuditEventType.ACCESS_DENIED,
+          actorId: user.id,
+          actorUsername: user.username,
+          targetType: 'document',
+          targetId: documentId,
+          outcome: AuditOutcome.DENIED,
+          details: {
+            action: DocumentAction.VERSION,
+            reason: authRes.reason,
+          },
+        });
+
         return {
           success: false,
           statusCode: authRes.statusCode || 404,
@@ -273,6 +349,26 @@ export class DocumentService {
           uploadedById: user.id,
         });
 
+        // Record audit event in transaction
+        await this.auditService.recordEvent(
+          {
+            eventType: AuditEventType.DOCUMENT_VERSION_CREATE,
+            actorId: user.id,
+            actorUsername: user.username,
+            targetType: 'document',
+            targetId: documentId,
+            outcome: AuditOutcome.SUCCESS,
+            details: {
+              versionNumber: nextVersionNum,
+              fileName: safeFilename,
+              fileSize: inspection.size,
+              mimeType: inspection.detectedMime,
+              sha256Checksum: inspection.sha256Checksum,
+            },
+          },
+          { client: txClient }
+        );
+
         const updatedDoc = (await txDocRepo.findById(documentId))!;
         return { document: updatedDoc, version: ver };
       });
@@ -317,6 +413,19 @@ export class DocumentService {
 
     const authRes = await authorize(user, doc, DocumentAction.EDIT);
     if (!authRes.allowed) {
+      await this.auditService.recordEvent({
+        eventType: AuditEventType.ACCESS_DENIED,
+        actorId: user.id,
+        actorUsername: user.username,
+        targetType: 'document',
+        targetId: documentId,
+        outcome: AuditOutcome.DENIED,
+        details: {
+          action: DocumentAction.EDIT,
+          reason: authRes.reason,
+        },
+      });
+
       return {
         success: false,
         statusCode: authRes.statusCode || 404,
@@ -326,6 +435,19 @@ export class DocumentService {
     }
 
     const updated = await this.docRepo.updateMetadata(documentId, data);
+
+    await this.auditService.recordEvent({
+      eventType: AuditEventType.DOCUMENT_EDIT,
+      actorId: user.id,
+      actorUsername: user.username,
+      targetType: 'document',
+      targetId: documentId,
+      outcome: AuditOutcome.SUCCESS,
+      details: {
+        updatedFields: Object.keys(data),
+      },
+    });
+
     return {
       success: true,
       data: updated!,
@@ -348,6 +470,19 @@ export class DocumentService {
 
     const authRes = await authorize(user, doc, DocumentAction.DELETE);
     if (!authRes.allowed) {
+      await this.auditService.recordEvent({
+        eventType: AuditEventType.ACCESS_DENIED,
+        actorId: user.id,
+        actorUsername: user.username,
+        targetType: 'document',
+        targetId: documentId,
+        outcome: AuditOutcome.DENIED,
+        details: {
+          action: DocumentAction.DELETE,
+          reason: authRes.reason,
+        },
+      });
+
       return {
         success: false,
         statusCode: authRes.statusCode || 404,
@@ -357,6 +492,16 @@ export class DocumentService {
     }
 
     await this.docRepo.softDelete(documentId);
+
+    await this.auditService.recordEvent({
+      eventType: AuditEventType.DOCUMENT_DELETE,
+      actorId: user.id,
+      actorUsername: user.username,
+      targetType: 'document',
+      targetId: documentId,
+      outcome: AuditOutcome.SUCCESS,
+    });
+
     return {
       success: true,
     };
@@ -378,6 +523,19 @@ export class DocumentService {
 
     const authRes = await authorize(user, doc, DocumentAction.RECOVER);
     if (!authRes.allowed) {
+      await this.auditService.recordEvent({
+        eventType: AuditEventType.ACCESS_DENIED,
+        actorId: user.id,
+        actorUsername: user.username,
+        targetType: 'document',
+        targetId: documentId,
+        outcome: AuditOutcome.DENIED,
+        details: {
+          action: DocumentAction.RECOVER,
+          reason: authRes.reason,
+        },
+      });
+
       return {
         success: false,
         statusCode: authRes.statusCode || 404,
@@ -387,6 +545,16 @@ export class DocumentService {
     }
 
     await this.docRepo.recover(documentId);
+
+    await this.auditService.recordEvent({
+      eventType: AuditEventType.DOCUMENT_RECOVER,
+      actorId: user.id,
+      actorUsername: user.username,
+      targetType: 'document',
+      targetId: documentId,
+      outcome: AuditOutcome.SUCCESS,
+    });
+
     return {
       success: true,
     };

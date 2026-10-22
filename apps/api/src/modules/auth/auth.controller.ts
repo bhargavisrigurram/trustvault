@@ -3,10 +3,13 @@ import { RegisterRequestSchema, LoginRequestSchema } from '@trustvault/shared';
 import { UserRepository } from '../users/user.repository.js';
 import { SessionService } from './session.service.js';
 import { hashPassword, verifyPassword } from './password.js';
+import { AuditService } from '../audit/audit.service.js';
 import { config } from '../../config/index.js';
+import { AuditEventType, AuditOutcome } from '@trustvault/shared';
 
 const userRepo = new UserRepository();
 const sessionService = new SessionService();
+const auditService = new AuditService();
 
 export class AuthController {
   /**
@@ -71,7 +74,14 @@ export class AuthController {
       const userWithPassword = await userRepo.findByUsernameOrEmail(validated.usernameOrEmail);
 
       // Generic login failure message to prevent username enumeration
-      const genericInvalid = () => {
+      const genericInvalid = async () => {
+        await auditService.recordEvent({
+          eventType: AuditEventType.AUTH_LOGIN_FAILURE,
+          actorUsername: validated.usernameOrEmail,
+          outcome: AuditOutcome.DENIED,
+          details: { ip: req.ip || req.socket.remoteAddress },
+        });
+
         res.status(401).json({
           success: false,
           error: {
@@ -87,12 +97,20 @@ export class AuthController {
           '$argon2id$v=19$m=65536,t=3,p=4$dummyhashdummyhashdummyhash$dummyhashdummyhash',
           validated.password
         );
-        genericInvalid();
+        await genericInvalid();
         return;
       }
 
       // Check account active status
       if (!userWithPassword.is_active) {
+        await auditService.recordEvent({
+          eventType: AuditEventType.AUTH_LOGIN_FAILURE,
+          actorId: userWithPassword.id,
+          actorUsername: userWithPassword.username,
+          outcome: AuditOutcome.DENIED,
+          details: { reason: 'account_disabled' },
+        });
+
         res.status(403).json({
           success: false,
           error: {
@@ -108,6 +126,14 @@ export class AuthController {
         const lockedUntil = new Date(userWithPassword.locked_until).getTime();
         if (Date.now() < lockedUntil) {
           const remainingMinutes = Math.ceil((lockedUntil - Date.now()) / (60 * 1000));
+          await auditService.recordEvent({
+            eventType: AuditEventType.USER_LOCKED,
+            actorId: userWithPassword.id,
+            actorUsername: userWithPassword.username,
+            outcome: AuditOutcome.DENIED,
+            details: { remainingMinutes },
+          });
+
           res.status(429).json({
             success: false,
             error: {
@@ -124,7 +150,7 @@ export class AuthController {
 
       if (!isMatch) {
         await userRepo.recordFailedAttempt(userWithPassword.id, config.rateLimit.lockoutMinutes);
-        genericInvalid();
+        await genericInvalid();
         return;
       }
 
@@ -143,6 +169,15 @@ export class AuthController {
         userWithPassword.id,
         metadata
       );
+
+      // Record successful login in audit chain
+      await auditService.recordEvent({
+        eventType: AuditEventType.AUTH_LOGIN_SUCCESS,
+        actorId: userWithPassword.id,
+        actorUsername: userWithPassword.username,
+        outcome: AuditOutcome.SUCCESS,
+        details: { ip: metadata.ipAddress },
+      });
 
       // Set HttpOnly, Secure, SameSite session cookie
       res.cookie(config.session.cookieName, sessionId, {
@@ -183,6 +218,15 @@ export class AuthController {
       const sessionId = req.cookies[config.session.cookieName];
       if (sessionId) {
         await sessionService.destroySession(sessionId);
+      }
+
+      if (req.user) {
+        await auditService.recordEvent({
+          eventType: AuditEventType.AUTH_LOGOUT,
+          actorId: req.user.id,
+          actorUsername: req.user.username,
+          outcome: AuditOutcome.SUCCESS,
+        });
       }
 
       res.clearCookie(config.session.cookieName, {
