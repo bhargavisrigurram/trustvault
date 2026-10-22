@@ -4,6 +4,7 @@ import {
   CreateDocumentRequestSchema,
   UpdateDocumentRequestSchema,
   CreateVersionRequestSchema,
+  SearchDocumentsQuerySchema,
 } from '@trustvault/shared';
 
 const docService = new DocumentService();
@@ -252,6 +253,23 @@ export class DocumentController {
         data: {
           message: 'Document recovered successfully',
         },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Search and list documents with permission safety
+   */
+  static async listOrSearch(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const validated = SearchDocumentsQuerySchema.parse(req.query);
+      const result = await docService.searchDocuments(req.user!, validated);
+
+      res.status(200).json({
+        success: true,
+        data: result.data,
       });
     } catch (err) {
       next(err);

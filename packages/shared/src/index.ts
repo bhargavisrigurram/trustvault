@@ -284,6 +284,59 @@ export function sanitizeFilename(filename: string): string {
 }
 
 // ==========================================
+// Document Search & Filtering Schemas
+// ==========================================
+
+export const SearchDocumentsQuerySchema = z.object({
+  q: z.string().optional(),
+  category: z.string().optional(),
+  mimeType: z.string().optional(),
+  fileType: z.string().optional(),
+  filter: z.enum(['all', 'owned', 'shared', 'trash']).default('all'),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  sortBy: z.enum(['updated_at', 'created_at', 'title', 'file_size']).default('updated_at'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export type SearchDocumentsQuery = z.infer<typeof SearchDocumentsQuerySchema>;
+
+export interface DocumentSearchItem {
+  id: string;
+  title: string;
+  category: string;
+  owner_id: string;
+  owner_username: string;
+  current_version_number: number;
+  file_name: string | null;
+  file_size: number | null;
+  mime_type: string | null;
+  sha256_checksum: string | null;
+  effective_permission: 'owner' | 'edit' | 'read';
+  is_deleted: boolean;
+  created_at: string | Date;
+  updated_at: string | Date;
+}
+
+export interface DocumentSearchFacets {
+  categories: Array<{ category: string; count: number }>;
+  mimeTypes: Array<{ mimeType: string; count: number }>;
+}
+
+export interface DocumentSearchResult {
+  documents: DocumentSearchItem[];
+  pagination: {
+    totalCount: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+  facets: DocumentSearchFacets;
+}
+
+// ==========================================
 // Authorization Result
 // ==========================================
 

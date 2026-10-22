@@ -6,7 +6,13 @@ import { AuditService } from '../audit/audit.service.js';
 import { authorize } from '../authorization/index.js';
 import { transaction } from '../../db/index.js';
 import { DocumentAction, AuditEventType, AuditOutcome, sanitizeFilename } from '@trustvault/shared';
-import type { User, Document, DocumentVersion } from '@trustvault/shared';
+import type {
+  User,
+  Document,
+  DocumentVersion,
+  SearchDocumentsQuery,
+  DocumentSearchResult,
+} from '@trustvault/shared';
 
 export interface ServiceResult<T> {
   success: boolean;
@@ -557,6 +563,20 @@ export class DocumentService {
 
     return {
       success: true,
+    };
+  }
+
+  /**
+   * Search documents with database-level permission boundaries
+   */
+  async searchDocuments(
+    user: User,
+    query: SearchDocumentsQuery
+  ): Promise<ServiceResult<DocumentSearchResult>> {
+    const result = await this.docRepo.searchDocuments(user.id, query);
+    return {
+      success: true,
+      data: result,
     };
   }
 }

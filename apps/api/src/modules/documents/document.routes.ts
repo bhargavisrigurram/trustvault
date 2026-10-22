@@ -31,6 +31,7 @@ const router = Router();
 // All document operations require strict authentication
 router.use(requireAuth);
 
+router.get('/', DocumentController.listOrSearch);
 router.post('/', upload.single('file'), DocumentController.create);
 router.get('/:id', DocumentController.getById);
 router.get('/:id/download', DocumentController.download);
