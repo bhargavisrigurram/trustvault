@@ -196,6 +196,24 @@ export const CreateVersionRequestSchema = z.object({
 
 export type CreateVersionRequest = z.infer<typeof CreateVersionRequestSchema>;
 
+// ==========================================
+// Sharing & Grants Schemas
+// ==========================================
+
+export const CreateGrantRequestSchema = z.object({
+  granteeUsernameOrEmail: z.string().min(1, 'Grantee username or email is required').max(100),
+  permission: z.enum(['read', 'edit']),
+  expiresInHours: z.coerce.number().int().min(1).max(8760).optional(), // Max 1 year
+});
+
+export type CreateGrantRequest = z.infer<typeof CreateGrantRequestSchema>;
+
+export const CreateDownloadTokenRequestSchema = z.object({
+  versionNumber: z.coerce.number().int().min(1).optional(),
+});
+
+export type CreateDownloadTokenRequest = z.infer<typeof CreateDownloadTokenRequestSchema>;
+
 /**
  * Sanitize filenames for display and storage metadata:
  * - Strip directory traversal characters (../, ..\, etc.)

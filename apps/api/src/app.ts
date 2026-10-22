@@ -5,6 +5,7 @@ import { authenticate, csrfProtection } from './middleware/auth.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { documentRoutes } from './modules/documents/document.routes.js';
+import { sharingRoutes } from './modules/sharing/sharing.routes.js';
 import { getDb } from './db/index.js';
 
 export function createApp() {
@@ -51,6 +52,7 @@ export function createApp() {
 
   // 7. Route Mounts
   app.use('/api/auth', authRoutes);
+  app.use('/api/documents', sharingRoutes);
   app.use('/api/documents', documentRoutes);
 
   // 8. 404 Handler
