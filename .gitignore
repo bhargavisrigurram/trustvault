@@ -19,10 +19,10 @@ coverage/
 test-results/
 playwright-report/
 
-# Storage & uploads
-storage/
-uploads/
-temp/
+# Storage & uploads (at repository root)
+/storage/
+/uploads/
+/temp/
 *.log
 
 # IDE & OS

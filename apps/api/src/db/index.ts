@@ -47,7 +47,10 @@ export async function getDb(): Promise<DbClient> {
   return {
     async query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
       const res = await pgliteInstance!.query<T>(text, params);
-      return { rows: res.rows, rowCount: res.rows.length };
+      return {
+        rows: res.rows,
+        rowCount: (res as any).affectedRows ?? (res as any).rowCount ?? res.rows.length,
+      };
     },
     async exec(sql: string): Promise<void> {
       await pgliteInstance!.exec(sql);
@@ -93,7 +96,10 @@ export async function transaction<T>(callback: (client: DbClient) => Promise<T>)
     const wrappedClient: DbClient = {
       async query<R = any>(text: string, params?: any[]): Promise<QueryResult<R>> {
         const res = await tx.query<R>(text, params);
-        return { rows: res.rows, rowCount: res.rows.length };
+        return {
+          rows: res.rows,
+          rowCount: (res as any).affectedRows ?? (res as any).rowCount ?? res.rows.length,
+        };
       },
       async exec(sql: string): Promise<void> {
         await tx.exec(sql);

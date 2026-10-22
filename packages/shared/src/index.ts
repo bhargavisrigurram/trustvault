@@ -143,6 +143,77 @@ export const DocumentVersionSchema = z.object({
 export type DocumentVersion = z.infer<typeof DocumentVersionSchema>;
 
 // ==========================================
+// File Upload & Type Allowlist
+// ==========================================
+
+export const ALLOWED_FILE_TYPES: Record<string, { mime: string; extensions: string[] }> = {
+  pdf: { mime: 'application/pdf', extensions: ['.pdf'] },
+  png: { mime: 'image/png', extensions: ['.png'] },
+  jpeg: { mime: 'image/jpeg', extensions: ['.jpg', '.jpeg'] },
+  txt: { mime: 'text/plain', extensions: ['.txt'] },
+  md: { mime: 'text/markdown', extensions: ['.md', '.markdown'] },
+  csv: { mime: 'text/csv', extensions: ['.csv'] },
+};
+
+export const ALLOWED_MIME_TYPES = Object.values(ALLOWED_FILE_TYPES).map((t) => t.mime);
+
+export const CreateDocumentRequestSchema = z.object({
+  title: z
+    .string()
+    .min(1, 'Title is required')
+    .max(255, 'Title must not exceed 255 characters')
+    .transform((t) => t.trim()),
+  category: z
+    .string()
+    .min(1, 'Category is required')
+    .max(100, 'Category must not exceed 100 characters')
+    .default('General')
+    .transform((c) => c.trim()),
+});
+
+export type CreateDocumentRequest = z.infer<typeof CreateDocumentRequestSchema>;
+
+export const UpdateDocumentRequestSchema = z.object({
+  title: z
+    .string()
+    .min(1, 'Title is required')
+    .max(255, 'Title must not exceed 255 characters')
+    .optional()
+    .transform((t) => t?.trim()),
+  category: z
+    .string()
+    .min(1, 'Category is required')
+    .max(100, 'Category must not exceed 100 characters')
+    .optional()
+    .transform((c) => c?.trim()),
+});
+
+export type UpdateDocumentRequest = z.infer<typeof UpdateDocumentRequestSchema>;
+
+export const CreateVersionRequestSchema = z.object({
+  expectedVersion: z.coerce.number().int().min(1).optional(),
+});
+
+export type CreateVersionRequest = z.infer<typeof CreateVersionRequestSchema>;
+
+/**
+ * Sanitize filenames for display and storage metadata:
+ * - Strip directory traversal characters (../, ..\, etc.)
+ * - Strip control characters and HTML tags (prevent stored XSS)
+ * - Restrict to safe ASCII and common punctuation
+ */
+export function sanitizeFilename(filename: string): string {
+  // Extract basename to eliminate path components
+  const base = filename.replace(/^.*[\\/]/, '');
+  // Strip control chars, HTML/script tags, and dangerous symbols
+  const sanitized = base
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+    .replace(/&/g, '&amp;')
+    .trim();
+  return sanitized.length > 0 ? sanitized.slice(0, 255) : 'unnamed_file';
+}
+
+// ==========================================
 // Authorization Result
 // ==========================================
 

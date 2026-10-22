@@ -19,9 +19,13 @@
     "seed": "tsx database/seed.ts"
   },
   "devDependencies": {
+    "@types/multer": "^2.3.0",
     "@types/node": "^22.7.4",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2",
     "vitest": "^2.1.1"
+  },
+  "dependencies": {
+    "multer": "^2.5.0"
   }
 }
