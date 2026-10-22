@@ -15,8 +15,12 @@ import { config } from './config/index.js';
 export function createApp() {
   const app = express();
 
+  // Trust first proxy for correct client IP detection behind tunnels & load balancers
+  app.set('trust proxy', 1);
+
   // 1. Security Headers (Helmet, CSP, nosniff, etc.)
   app.use(securityHeaders);
+
 
   // 2. CORS allowlist
   app.use(corsMiddleware);
@@ -71,9 +75,9 @@ export function createApp() {
     });
   });
 
-  // 9. Serve Frontend in Production if built and in production environment
+  // 9. Serve Frontend if built
   const webDistPath = path.resolve('apps/web/dist');
-  if (config.env === 'production' && fs.existsSync(webDistPath)) {
+  if (fs.existsSync(webDistPath)) {
     app.use(express.static(webDistPath));
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api')) {
@@ -82,6 +86,7 @@ export function createApp() {
       res.sendFile(path.join(webDistPath, 'index.html'));
     });
   }
+
 
   // 9. 404 Handler
   app.use((_req, res) => {

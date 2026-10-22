@@ -7,16 +7,17 @@ export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'blob:'],
-      connectSrc: ["'self'", config.frontendUrl],
-      fontSrc: ["'self'"],
+      connectSrc: ["'self'", config.frontendUrl, 'https:', 'wss:'],
+      fontSrc: ["'self'", 'data:'],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
-      upgradeInsecureRequests: config.env === 'production' ? [] : null,
+      upgradeInsecureRequests: null,
     },
   },
+
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'same-origin' },
   dnsPrefetchControl: { allow: false },
@@ -42,11 +43,18 @@ export const corsMiddleware = cors({
       'http://127.0.0.1:5173',
     ];
 
-    if (allowedOrigins.includes(origin)) {
+    const isAllowedTunnel =
+      origin.endsWith('.loca.lt') ||
+      origin.endsWith('.trycloudflare.com') ||
+      origin.endsWith('.ngrok-free.app') ||
+      origin.endsWith('.ngrok.io');
+
+    if (allowedOrigins.includes(origin) || isAllowedTunnel) {
       callback(null, true);
     } else {
       callback(new Error('CORS request rejected: Origin not allowed'));
     }
+
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
