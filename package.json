@@ -11,7 +11,6 @@
     "build": "npm run build --workspaces --if-present",
     "start": "node apps/api/dist/server.js",
     "dev:api": "npm run dev --workspace=apps/api",
-
     "dev:web": "npm run dev --workspace=apps/web",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -21,14 +20,14 @@
     "seed": "tsx database/seed.ts",
     "mutation-test": "tsx scripts/mutation-test.ts"
   },
-  "devDependencies": {
+  "dependencies": {
     "@types/multer": "^2.3.0",
     "@types/node": "^22.7.4",
-    "tsx": "^4.19.1",
-    "typescript": "^5.6.2",
-    "vitest": "^2.1.1"
+    "multer": "^2.5.0",
+    "typescript": "^5.6.2"
   },
-  "dependencies": {
-    "multer": "^2.5.0"
+  "devDependencies": {
+    "tsx": "^4.19.1",
+    "vitest": "^2.1.1"
   }
 }

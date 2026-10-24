@@ -5,7 +5,7 @@ interface VaultCopilotPageProps {
   onBack: () => void;
 }
 
-export const VaultCopilotPage: React.FC<VaultCopilotPageProps> = ({ onBack }) => {
+export const VaultCopilotPage: React.FC<VaultCopilotPageProps> = ({ onBack }: VaultCopilotPageProps) => {
   return (
     <div className="w-full">
       <VaultCopilotModal
