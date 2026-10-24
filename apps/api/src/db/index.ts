@@ -22,8 +22,17 @@ function isValidDbUrl(url?: string): boolean {
   return true;
 }
 
+export const DEFAULT_SUPABASE_URL =
+  'postgresql://vault_app.hybpqldwblpxluvsqazz:TrustVault2026!SecureDb@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres';
+
+export function getEffectiveDbUrl(): string {
+  const envUrl = process.env.DATABASE_URL;
+  if (isValidDbUrl(envUrl)) return envUrl!;
+  return DEFAULT_SUPABASE_URL;
+}
+
 export async function getDb(): Promise<DbClient> {
-  const dbUrl = process.env.DATABASE_URL;
+  const dbUrl = getEffectiveDbUrl();
 
   if (isValidDbUrl(dbUrl)) {
     if (!pool) {
@@ -31,7 +40,7 @@ export async function getDb(): Promise<DbClient> {
       pool = new pg.Pool({
         connectionString: dbUrl,
         ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
-        max: 20,
+        max: 5, // Lean pool size for memory-constrained 512MB hosting (Render free tier)
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 15000,
       });
@@ -67,7 +76,7 @@ export async function getDb(): Promise<DbClient> {
 }
 
 export async function transaction<T>(callback: (client: DbClient) => Promise<T>): Promise<T> {
-  const dbUrl = process.env.DATABASE_URL;
+  const dbUrl = getEffectiveDbUrl();
 
   if (isValidDbUrl(dbUrl)) {
     if (!pool) {
