@@ -68,4 +68,19 @@ export class AuditController {
       next(err);
     }
   }
+
+  /**
+   * Run 1-click comprehensive automated security scan
+   */
+  static async runAutomatedScan(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const report = await auditService.runAutomatedSecurityScan();
+      res.status(200).json({
+        success: true,
+        data: report,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

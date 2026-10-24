@@ -8,8 +8,10 @@ import {
   Copy,
   Check,
   Key,
+  Activity,
 } from 'lucide-react';
 import type { AuditRecord } from '@trustvault/shared';
+import { GlobalSecurityScanModal } from '../components/GlobalSecurityScanModal';
 
 export const AdminAuditPage: React.FC = () => {
   const [verification, setVerification] = useState<{
@@ -34,6 +36,7 @@ export const AdminAuditPage: React.FC = () => {
   const [eventTypeFilter, setEventTypeFilter] = useState('');
   const [outcomeFilter, setOutcomeFilter] = useState('');
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
+  const [globalScanOpen, setGlobalScanOpen] = useState(false);
 
   const handleVerify = async () => {
     setVerifying(true);
@@ -102,15 +105,26 @@ export const AdminAuditPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Page Title */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center space-x-2.5">
-          <Key className="w-6 h-6 text-purple-400" />
-          <span>Security & Cryptographic Audit Verification</span>
-        </h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Cryptographically linked SHA-256 event chain, database immutability triggers, and anomaly monitoring
-        </p>
+      {/* Page Title & Global Scan Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center space-x-2.5">
+            <Key className="w-6 h-6 text-purple-400" />
+            <span>Security & Cryptographic Audit Verification</span>
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Cryptographically linked SHA-256 event chain, database immutability triggers, and anomaly monitoring
+          </p>
+        </div>
+
+        <button
+          id="btn-admin-global-scan"
+          onClick={() => setGlobalScanOpen(true)}
+          className="flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-400 text-slate-950 font-bold text-xs tracking-wide shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 transition-all"
+        >
+          <Activity className="w-4 h-4" />
+          <span>Run All Automated Scans</span>
+        </button>
       </div>
 
       {/* 1. Chain Verification Card */}
@@ -148,15 +162,17 @@ export const AdminAuditPage: React.FC = () => {
             </div>
           </div>
 
-          <button
-            id="btn-reverify-chain"
-            onClick={handleVerify}
-            disabled={verifying}
-            className="flex items-center justify-center space-x-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs tracking-wide transition-colors shadow-lg shadow-purple-600/20 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${verifying ? 'animate-spin' : ''}`} />
-            <span>{verifying ? 'Recalculating...' : 'Verify Entire Chain'}</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              id="btn-reverify-chain"
+              onClick={handleVerify}
+              disabled={verifying}
+              className="flex items-center justify-center space-x-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs tracking-wide transition-colors shadow-lg shadow-purple-600/20 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${verifying ? 'animate-spin' : ''}`} />
+              <span>{verifying ? 'Recalculating...' : 'Verify Entire Chain'}</span>
+            </button>
+          </div>
         </div>
 
         {verification && (
@@ -383,6 +399,17 @@ export const AdminAuditPage: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Global Automated Security Scan Modal */}
+      <GlobalSecurityScanModal
+        isOpen={globalScanOpen}
+        onClose={() => {
+          setGlobalScanOpen(false);
+          handleVerify();
+          fetchAnomalies();
+          fetchLogs();
+        }}
+      />
     </div>
   );
 };

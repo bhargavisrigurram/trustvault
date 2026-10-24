@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Shield, Lock, User as UserIcon, Mail, CheckCircle2, XCircle, ArrowRight, X } from 'lucide-react';
+import { Shield, Lock, User as UserIcon, Mail, CheckCircle2, XCircle, ArrowRight, X, Sparkles } from 'lucide-react';
+import { JudgeDemoLoginCard } from '../components/JudgeDemoLoginCard';
 
 interface AuthPageProps {
   initialMode?: 'login' | 'register';
@@ -259,6 +260,24 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               : 'Need a new secure account? Register now'}
           </button>
         </div>
+
+        {/* Judge & Fast-Track 1-Click Evaluation Credentials */}
+        {!isRegistering && (
+          <div className="mt-5 pt-4 border-t border-slate-800">
+            <div className="flex items-center space-x-1.5 mb-2.5 text-slate-400 text-xs">
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span className="font-bold text-white uppercase text-[10px] tracking-wider">
+                Evaluator / Judge 1-Click Fast Track
+              </span>
+            </div>
+            <JudgeDemoLoginCard
+              compact={true}
+              onSuccess={() => {
+                if (isModal && onClose) onClose();
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

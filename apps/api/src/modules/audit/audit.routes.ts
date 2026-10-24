@@ -10,6 +10,7 @@ router.use(requireRole(['admin']));
 
 router.get('/verify', AuditController.verify);
 router.get('/anomalies', AuditController.getAnomalies);
+router.post('/scan', AuditController.runAutomatedScan);
 router.get('/', AuditController.listLogs);
 
 export const auditRoutes = router;

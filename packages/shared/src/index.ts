@@ -236,6 +236,9 @@ export const AuditEventType = {
   TOKEN_REDEEM: 'token.redeem',
   TOKEN_REJECT: 'token.reject',
   ADMIN_ACTION: 'admin.action',
+  AI_DOCUMENT_ANALYSIS: 'ai.document.analysis',
+  AI_SECURITY_SCAN: 'ai.security.scan',
+  AI_CHAT_QUERY: 'ai.chat.query',
 } as const;
 
 export type AuditEventTypeEnum = (typeof AuditEventType)[keyof typeof AuditEventType];
@@ -359,3 +362,99 @@ export interface ApiResponse<T = unknown> {
     details?: unknown;
   };
 }
+
+// ==========================================
+// AI Intelligence & Security DLP Schemas
+// ==========================================
+
+export const AiDocumentSummaryRequestSchema = z.object({
+  documentId: z.string().uuid(),
+  versionNumber: z.number().int().min(1).optional(),
+});
+export type AiDocumentSummaryRequest = z.infer<typeof AiDocumentSummaryRequestSchema>;
+
+export interface AiDocumentSummaryResponse {
+  summary: string;
+  keyPoints: string[];
+  categorySuggestion: string;
+  recommendedTags: string[];
+  readingTimeMinutes: number;
+  language: string;
+  sourceEngine: 'gemini' | 'local-nlp';
+}
+
+export const AiSecurityScanRequestSchema = z.object({
+  documentId: z.string().uuid(),
+  versionNumber: z.number().int().min(1).optional(),
+});
+export type AiSecurityScanRequest = z.infer<typeof AiSecurityScanRequestSchema>;
+
+export interface AiDlpFinding {
+  type: string;
+  severity: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
+  description: string;
+  matchedSnippet?: string;
+  line?: number;
+}
+
+export interface AiSecurityScanResponse {
+  riskLevel: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'CLEAN';
+  riskScore: number; // 0 - 100
+  findings: AiDlpFinding[];
+  redactedPreview?: string;
+  complianceStatus: {
+    gdprRisk: boolean;
+    hipaaRisk: boolean;
+    credentialLeakRisk: boolean;
+  };
+  recommendations: string[];
+  sourceEngine: 'gemini' | 'local-dlp';
+}
+
+export const AiChatRequestSchema = z.object({
+  message: z.string().min(1, 'Message cannot be empty').max(4000),
+  documentId: z
+    .string()
+    .nullable()
+    .optional()
+    .or(z.literal(''))
+    .transform((val) => (val && typeof val === 'string' && val.trim() !== '' ? val.trim() : undefined)),
+  history: z
+    .array(
+      z.object({
+        role: z.string().transform((r) => (r === 'model' || r === 'system' ? 'assistant' : r)),
+        content: z.string().max(50000),
+      })
+    )
+    .nullable()
+    .optional()
+    .transform((val) => (val && Array.isArray(val) ? val : [])),
+  apiKey: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val && typeof val === 'string' && val.trim() !== '' ? val.trim() : undefined)),
+});
+export type AiChatRequest = z.infer<typeof AiChatRequestSchema>;
+
+export interface AiChatResponse {
+  reply: string;
+  citedDocumentTitle?: string;
+  suggestedQuestions?: string[];
+  sourceEngine: 'gemini' | 'local-copilot';
+}
+
+export const AiQuickScanRequestSchema = z.object({
+  text: z.string().max(50000),
+  fileName: z.string().optional(),
+});
+export type AiQuickScanRequest = z.infer<typeof AiQuickScanRequestSchema>;
+
+export interface AiQuickScanResponse {
+  riskLevel: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'CLEAN';
+  categorySuggestion: string;
+  detectedSecretsCount: number;
+  warnings: string[];
+  sourceEngine: 'gemini' | 'local-dlp';
+}
+

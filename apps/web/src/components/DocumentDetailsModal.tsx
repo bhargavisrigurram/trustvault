@@ -11,6 +11,7 @@ import {
   History,
   Trash2,
   Hash,
+  Sparkles,
 } from 'lucide-react';
 import type { DocumentSearchItem } from '@trustvault/shared';
 
@@ -22,6 +23,7 @@ interface DocumentDetailsModalProps {
   onOpenShare: (docId: string) => void;
   onOpenHistory: (docId: string, canEdit: boolean) => void;
   onDelete: (docId: string, title: string) => void;
+  onOpenAi?: (doc: DocumentSearchItem) => void;
   isOwner: boolean;
 }
 
@@ -33,6 +35,7 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
   onOpenShare,
   onOpenHistory,
   onDelete,
+  onOpenAi,
   isOwner,
 }) => {
   const [copiedHash, setCopiedHash] = useState(false);
@@ -174,6 +177,18 @@ export const DocumentDetailsModal: React.FC<DocumentDetailsModalProps> = ({
               <span>Download File</span>
             </button>
 
+            {onOpenAi && (
+              <button
+                onClick={() => {
+                  onOpenAi(doc);
+                  onClose();
+                }}
+                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-teal-950/80 hover:bg-teal-900/80 text-teal-300 font-semibold text-xs border border-teal-800/80 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+                <span>AI Insights & DLP</span>
+              </button>
+            )}
 
             <button
               onClick={() => {

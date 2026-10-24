@@ -6,15 +6,17 @@ import {
   FileText,
   Activity,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 
 interface NavbarProps {
   currentView: 'home' | 'documents' | 'admin-audit';
   onNavigate: (view: 'home' | 'documents' | 'admin-audit') => void;
   onOpenAuth: (mode?: 'login' | 'register') => void;
+  onOpenCopilot?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenAuth }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenAuth, onOpenCopilot }) => {
   const { user, logout, isAdmin } = useAuth();
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
@@ -123,6 +125,29 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenA
             <span>{apiOnline ? 'Core Online' : 'Connecting...'}</span>
           </div>
 
+          {/* Supabase PostgreSQL Status */}
+          <div
+            className="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] font-mono text-slate-400"
+            title="Connected to Supabase PostgreSQL (hybpqldwblpxluvsqazz)"
+          >
+            <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400 animate-pulse" />
+            <span className="text-emerald-400 font-semibold">Supabase</span>
+            <span className="text-slate-500">Live</span>
+          </div>
+
+          {/* AI Copilot Quick Button - STRICTLY FOR LOGGED IN USERS ONLY */}
+          {user && onOpenCopilot && (
+            <button
+              id="btn-nav-copilot"
+              onClick={onOpenCopilot}
+              className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-teal-950/70 border border-teal-800/80 hover:border-teal-500 text-teal-300 text-xs font-semibold shadow-sm transition-all hover:scale-105"
+              title="Open Vault AI Copilot Assistant"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+              <span className="hidden sm:inline">AI Copilot</span>
+            </button>
+          )}
+
           {user ? (
             /* User Info & Logout */
             <div className="flex items-center space-x-3">
@@ -148,12 +173,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenA
               </button>
             </div>
           ) : (
-            /* Guest Actions */
+            /* Guest Actions: Sign In & Create Account */
             <div className="flex items-center space-x-2">
               <button
                 id="btn-nav-login"
                 onClick={() => onOpenAuth('login')}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-900 transition-colors"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-900 transition-colors border border-slate-800 hover:border-slate-700"
               >
                 Sign In
               </button>
@@ -161,9 +186,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenA
               <button
                 id="btn-nav-register"
                 onClick={() => onOpenAuth('register')}
-                className="flex items-center space-x-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-bold text-xs tracking-wide transition-all shadow-md shadow-emerald-500/20"
+                className="flex items-center space-x-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-bold text-xs tracking-wide transition-all shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/35 hover:-translate-y-0.5"
               >
-                <span>Launch Vault</span>
+                <span>Create Account</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>

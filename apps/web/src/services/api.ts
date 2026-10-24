@@ -6,6 +6,10 @@ import type {
   DocumentVersion,
   DocumentGrant,
   AuditRecord,
+  AiDocumentSummaryResponse,
+  AiSecurityScanResponse,
+  AiChatResponse,
+  AiQuickScanResponse,
 } from '@trustvault/shared';
 
 class ApiError extends Error {
@@ -31,12 +35,41 @@ export function getCsrfToken(): string | null {
   return csrfTokenStore;
 }
 
+// Session-based Gemini API Key store (allows client-side testing with personal key)
+const GEMINI_KEY_STORAGE = 'trustvault_gemini_api_key';
+
+export function getStoredGeminiKey(): string | null {
+  try {
+    return sessionStorage.getItem(GEMINI_KEY_STORAGE);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredGeminiKey(key: string | null) {
+  try {
+    if (key && key.trim()) {
+      sessionStorage.setItem(GEMINI_KEY_STORAGE, key.trim());
+    } else {
+      sessionStorage.removeItem(GEMINI_KEY_STORAGE);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
 
   // Send CSRF token on state-changing methods
   if (csrfTokenStore && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method || 'GET')) {
     headers.set('x-csrf-token', csrfTokenStore);
+  }
+
+  // Include custom Gemini key if configured in session
+  const geminiKey = getStoredGeminiKey();
+  if (geminiKey && !headers.has('x-gemini-key')) {
+    headers.set('x-gemini-key', geminiKey);
   }
 
   // Include cookies for server-side session authentication
@@ -225,5 +258,93 @@ export const api = {
     if (filters.offset) params.set('offset', String(filters.offset));
 
     return apiFetch(`/api/admin/audit?${params.toString()}`);
+  },
+
+  async runAutomatedSecurityScan(): Promise<{
+    overallStatus: 'SECURE' | 'WARNING' | 'COMPROMISED';
+    riskScore: number;
+    auditChainValid: boolean;
+    auditRecordsCount: number;
+    documentsScanned: number;
+    anomaliesCount: number;
+    dlpFindingsCount: number;
+    checks: Array<{ name: string; status: 'PASSED' | 'FAILED' | 'WARNING'; message: string }>;
+    recommendations: string[];
+    scannedAt: string;
+  }> {
+    return apiFetch('/api/admin/audit/scan', {
+      method: 'POST',
+    });
+  },
+
+  // ==========================================
+  // AI Intelligence & DLP Services
+  // ==========================================
+
+  async getAiStatus(): Promise<{
+    hasKey: boolean;
+    activeEngine: 'gemini' | 'local';
+    model: string;
+  }> {
+    return apiFetch('/api/ai/status');
+  },
+
+  async getAiSummary(
+    documentId: string,
+    versionNumber?: number
+  ): Promise<AiDocumentSummaryResponse> {
+    return apiFetch('/api/ai/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documentId, versionNumber }),
+    });
+  },
+
+  async getAiSecurityScan(
+    documentId: string,
+    versionNumber?: number
+  ): Promise<AiSecurityScanResponse> {
+    return apiFetch('/api/ai/security-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documentId, versionNumber }),
+    });
+  },
+
+  async sendAiChat(
+    message: string,
+    documentId?: string,
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>
+  ): Promise<AiChatResponse> {
+    const payload: any = {
+      message: message.trim(),
+    };
+
+    if (documentId && typeof documentId === 'string' && documentId.trim() !== '') {
+      payload.documentId = documentId.trim();
+    }
+
+    if (Array.isArray(history) && history.length > 0) {
+      payload.history = history
+        .filter((h) => h && h.content && !h.content.startsWith('⚠️'))
+        .map((h) => ({
+          role: h.role === 'assistant' ? 'assistant' : 'user',
+          content: String(h.content).slice(0, 10000),
+        }));
+    }
+
+    return apiFetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async runQuickScan(text: string, fileName?: string): Promise<AiQuickScanResponse> {
+    return apiFetch('/api/ai/quick-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, fileName }),
+    });
   },
 };

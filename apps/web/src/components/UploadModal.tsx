@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { api } from '../services/api';
-import { X, UploadCloud, File, AlertCircle } from 'lucide-react';
+import { X, UploadCloud, File, AlertCircle, Sparkles, ShieldCheck, RefreshCw } from 'lucide-react';
+import type { AiQuickScanResponse } from '@trustvault/shared';
+import { PreUploadSecurityChecker } from './PreUploadSecurityChecker';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -14,6 +16,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
   const [category, setCategory] = useState('General');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<AiQuickScanResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -27,12 +31,30 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
         return;
       }
       setFile(selected);
+      setScanResult(null);
       setError(null);
       if (!title) {
         // Auto-populate title from filename without extension
         const cleanName = selected.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
         setTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
       }
+    }
+  };
+
+  const handleQuickScan = async () => {
+    if (!file) return;
+    setScanning(true);
+    try {
+      const text = await file.text();
+      const res = await api.runQuickScan(text.slice(0, 45000), file.name);
+      setScanResult(res);
+      if (res.categorySuggestion && category === 'General') {
+        setCategory(res.categorySuggestion);
+      }
+    } catch (err: any) {
+      console.warn('Quick scan error:', err);
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -118,6 +140,67 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
               </div>
             )}
           </div>
+
+          {/* User File Security & Magic Byte Inspector */}
+          {file && (
+            <PreUploadSecurityChecker
+              file={file}
+              onSecurityStatusChange={(isSafe) => {
+                if (!isSafe) {
+                  setError('File contains dangerous binary signatures or suspicious extension.');
+                }
+              }}
+            />
+          )}
+
+          {/* AI Pre-Upload Quick Scan Tool */}
+          {file && (file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv') || file.name.endsWith('.json')) && (
+            <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5 text-xs text-slate-300">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="font-semibold">AI Pre-Upload DLP Scan</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleQuickScan}
+                  disabled={scanning}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-400 border border-emerald-800/80 text-[11px] font-semibold transition-colors flex items-center space-x-1"
+                >
+                  {scanning ? <RefreshCw className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                  <span>{scanning ? 'Scanning...' : 'Scan Secrets'}</span>
+                </button>
+              </div>
+
+              {scanResult && (
+                <div
+                  className={`p-2 rounded-lg border text-xs flex items-start space-x-2 ${
+                    scanResult.riskLevel === 'CLEAN'
+                      ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300'
+                      : 'bg-rose-950/50 border-rose-800 text-rose-300'
+                  }`}
+                >
+                  {scanResult.riskLevel === 'CLEAN' ? (
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <span className="font-bold">
+                      {scanResult.riskLevel === 'CLEAN'
+                        ? 'DLP Check Passed: No secrets found.'
+                        : `DLP Warning: ${scanResult.detectedSecretsCount} secrets/credentials detected!`}
+                    </span>
+                    {scanResult.categorySuggestion && (
+                      <p className="text-[11px] text-slate-300 mt-0.5">
+                        Suggested category: <strong>{scanResult.categorySuggestion}</strong>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">

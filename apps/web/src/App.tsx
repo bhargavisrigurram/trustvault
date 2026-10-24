@@ -5,6 +5,7 @@ import { HomePage } from './pages/HomePage';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminAuditPage } from './pages/AdminAuditPage';
+import { VaultCopilotModal } from './components/VaultCopilotModal';
 import { Shield } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
@@ -12,6 +13,7 @@ const MainLayout: React.FC = () => {
   const [currentView, setCurrentView] = useState<'home' | 'documents' | 'admin-audit'>('home');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [globalCopilotOpen, setGlobalCopilotOpen] = useState(false);
 
   // When a user successfully authenticates, automatically close the modal and direct to documents
   useEffect(() => {
@@ -56,6 +58,7 @@ const MainLayout: React.FC = () => {
           setCurrentView(view);
         }}
         onOpenAuth={handleOpenAuth}
+        onOpenCopilot={() => setGlobalCopilotOpen(true)}
       />
 
       <main className="flex-1">
@@ -87,6 +90,14 @@ const MainLayout: React.FC = () => {
           initialMode={authMode}
           isModal={true}
           onClose={handleCloseAuth}
+        />
+      )}
+
+      {/* Global Vault AI Copilot Assistant - STRICTLY FOR LOGGED IN USERS ONLY */}
+      {user && (
+        <VaultCopilotModal
+          isOpen={globalCopilotOpen}
+          onClose={() => setGlobalCopilotOpen(false)}
         />
       )}
     </div>

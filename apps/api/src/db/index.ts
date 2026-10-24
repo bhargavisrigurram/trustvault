@@ -16,10 +16,16 @@ export interface DbClient {
 let pool: pg.Pool | null = null;
 let pgliteInstance: PGlite | null = null;
 
+function isValidDbUrl(url?: string): boolean {
+  if (!url || url.trim() === '') return false;
+  if (url.includes('[YOUR-DATABASE-PASSWORD]') || url.includes('[YOUR-PASSWORD]')) return false;
+  return true;
+}
+
 export async function getDb(): Promise<DbClient> {
   const dbUrl = process.env.DATABASE_URL;
 
-  if (dbUrl && dbUrl.trim() !== '') {
+  if (isValidDbUrl(dbUrl)) {
     if (!pool) {
       pool = new pg.Pool({
         connectionString: dbUrl,
@@ -61,7 +67,7 @@ export async function getDb(): Promise<DbClient> {
 export async function transaction<T>(callback: (client: DbClient) => Promise<T>): Promise<T> {
   const dbUrl = process.env.DATABASE_URL;
 
-  if (dbUrl && dbUrl.trim() !== '') {
+  if (isValidDbUrl(dbUrl)) {
     if (!pool) {
       await getDb();
     }

@@ -9,6 +9,7 @@ import { authRoutes } from './modules/auth/auth.routes.js';
 import { documentRoutes } from './modules/documents/document.routes.js';
 import { sharingRoutes } from './modules/sharing/sharing.routes.js';
 import { auditRoutes } from './modules/audit/audit.routes.js';
+import { aiRoutes } from './modules/ai/ai.routes.js';
 import { getDb } from './db/index.js';
 import { config } from './config/index.js';
 
@@ -63,6 +64,7 @@ export function createApp() {
   app.use('/api/documents', sharingRoutes);
   app.use('/api/documents', documentRoutes);
   app.use('/api/admin/audit', auditRoutes);
+  app.use('/api/ai', aiRoutes);
 
   // 8. Explicitly block direct access to internal and storage paths
   app.use(['/storage', '/uploads', '/database', '/scripts', '/tests'], (_req, res) => {

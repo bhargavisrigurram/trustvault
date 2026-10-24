@@ -5,6 +5,8 @@ import { UploadModal } from '../components/UploadModal';
 import { VersionHistoryModal } from '../components/VersionHistoryModal';
 import { ShareModal } from '../components/ShareModal';
 import { DocumentDetailsModal } from '../components/DocumentDetailsModal';
+import { AiIntelligenceModal } from '../components/AiIntelligenceModal';
+import { VaultCopilotModal } from '../components/VaultCopilotModal';
 import {
   FileText,
   UploadCloud,
@@ -24,6 +26,8 @@ import {
   FileSpreadsheet,
   FileImage,
   FileCode,
+  Sparkles,
+  Bot,
 } from 'lucide-react';
 import type { DocumentSearchItem, DocumentSearchFacets } from '@trustvault/shared';
 
@@ -51,6 +55,8 @@ export const DashboardPage: React.FC = () => {
   const [historyCanEdit, setHistoryCanEdit] = useState(false);
   const [shareDocId, setShareDocId] = useState<string | null>(null);
   const [selectedDocForDetails, setSelectedDocForDetails] = useState<DocumentSearchItem | null>(null);
+  const [aiDoc, setAiDoc] = useState<DocumentSearchItem | null>(null);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
 
   const fetchDocuments = async () => {
     setLoading(true);
@@ -460,6 +466,16 @@ export const DashboardPage: React.FC = () => {
                         </button>
 
                         <button
+                          id={`btn-ai-${doc.id}`}
+                          onClick={() => setAiDoc(doc)}
+                          title="AI Summary, DLP Security Scan & Document Chat"
+                          className="flex items-center space-x-1 px-2 py-1.5 rounded-lg bg-teal-950/60 hover:bg-teal-900/60 text-teal-300 border border-teal-800/60 text-xs font-semibold transition-colors"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+                          <span>AI</span>
+                        </button>
+
+                        <button
                           id={`btn-inspect-${doc.id}`}
                           onClick={() => setSelectedDocForDetails(doc)}
                           title="Cryptographic Fingerprint & Security Invariants"
@@ -512,6 +528,20 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* Floating Vault Copilot Button */}
+      <div className="fixed bottom-6 right-6 z-30">
+        <button
+          id="btn-floating-copilot"
+          onClick={() => setIsCopilotOpen(true)}
+          className="flex items-center space-x-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-400 text-slate-950 font-bold text-xs shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-105 transition-all group"
+          title="Open Vault AI Security Copilot"
+        >
+          <Bot className="w-4 h-4 text-slate-950" />
+          <span>Vault Copilot</span>
+          <span className="w-2 h-2 rounded-full bg-slate-950/80 animate-pulse" />
+        </button>
+      </div>
+
       {/* Modals */}
       <UploadModal
         isOpen={isUploadOpen}
@@ -533,6 +563,19 @@ export const DashboardPage: React.FC = () => {
         onClose={() => setShareDocId(null)}
       />
 
+      {aiDoc && (
+        <AiIntelligenceModal
+          document={aiDoc}
+          isOpen={Boolean(aiDoc)}
+          onClose={() => setAiDoc(null)}
+        />
+      )}
+
+      <VaultCopilotModal
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+      />
+
       {selectedDocForDetails && (
         <DocumentDetailsModal
           document={selectedDocForDetails}
@@ -551,6 +594,7 @@ export const DashboardPage: React.FC = () => {
             setHistoryDocId(docId);
             setHistoryCanEdit(canEdit);
           }}
+          onOpenAi={(doc) => setAiDoc(doc)}
           onDelete={async (docId, title) => {
             if (!confirm(`Are you sure you want to move "${title}" to trash?`)) return;
             try {

@@ -10,6 +10,7 @@ export function errorHandler(
 ): void {
   // Handle Zod schema validation errors
   if (err instanceof ZodError) {
+    console.warn('[Validation Error]:', req.method, req.path, JSON.stringify(err.errors));
     res.status(400).json({
       success: false,
       error: {

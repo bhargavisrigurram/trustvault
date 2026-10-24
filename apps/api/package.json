@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "type": "module",
   "main": "dist/server.js",
-
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
@@ -11,6 +10,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.14",
+    "@google/genai": "^2.31.0",
     "@trustvault/shared": "*",
     "argon2": "^0.41.1",
     "cookie-parser": "^1.4.6",

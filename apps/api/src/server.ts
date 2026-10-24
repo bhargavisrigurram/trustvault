@@ -1,6 +1,7 @@
 import { createApp } from './app.js';
 import { config } from './config/index.js';
 import { runMigrations, closeDb } from './db/index.js';
+import { seedDemoAccounts } from './db/seed.js';
 
 async function main() {
   try {
@@ -10,6 +11,9 @@ async function main() {
     console.log('[TrustVault] Running database migrations...');
     await runMigrations();
     console.log('[TrustVault] Database schema is up to date.');
+
+    // Seed default judge/demo accounts
+    await seedDemoAccounts();
 
     const app = createApp();
 
