@@ -32,7 +32,7 @@ export class GrantService {
     data: {
       granteeUsernameOrEmail: string;
       permission: GrantPermissionType;
-      expiresInHours?: number;
+      expiresInHours?: number | null;
     }
   ): Promise<GrantServiceResult<DocumentGrant>> {
     const doc = await this.docRepo.findById(documentId);
@@ -70,13 +70,14 @@ export class GrantService {
     }
 
     // Resolve grantee
-    const grantee = await this.userRepo.findByUsernameOrEmail(data.granteeUsernameOrEmail);
+    const granteeIdentifier = data.granteeUsernameOrEmail.trim();
+    const grantee = await this.userRepo.findByUsernameOrEmail(granteeIdentifier);
     if (!grantee) {
       return {
         success: false,
         statusCode: 404,
         errorCode: 'USER_NOT_FOUND',
-        errorMessage: 'Recipient user not found',
+        errorMessage: `Recipient user "${granteeIdentifier}" not found. Verify username or email (e.g. bob, alice, admin).`,
       };
     }
 

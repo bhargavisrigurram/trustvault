@@ -54,6 +54,7 @@ export const DashboardPage: React.FC = () => {
   const [historyDocId, setHistoryDocId] = useState<string | null>(null);
   const [historyCanEdit, setHistoryCanEdit] = useState(false);
   const [shareDocId, setShareDocId] = useState<string | null>(null);
+  const [shareDocTitle, setShareDocTitle] = useState<string>('');
   const [selectedDocForDetails, setSelectedDocForDetails] = useState<DocumentSearchItem | null>(null);
   const [aiDoc, setAiDoc] = useState<DocumentSearchItem | null>(null);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
@@ -502,7 +503,10 @@ export const DashboardPage: React.FC = () => {
                         <div className="flex items-center space-x-1">
                           <button
                             id={`btn-share-${doc.id}`}
-                            onClick={() => setShareDocId(doc.id)}
+                            onClick={() => {
+                              setShareDocId(doc.id);
+                              setShareDocTitle(doc.title);
+                            }}
                             title="Share with Collaborators"
                             className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-slate-800 transition-colors"
                           >
@@ -559,8 +563,10 @@ export const DashboardPage: React.FC = () => {
 
       <ShareModal
         documentId={shareDocId}
+        documentTitle={shareDocTitle}
         isOpen={Boolean(shareDocId)}
         onClose={() => setShareDocId(null)}
+        onGrantCreated={fetchDocuments}
       />
 
       {aiDoc && (
@@ -589,7 +595,10 @@ export const DashboardPage: React.FC = () => {
               alert(err.message || 'Download failed');
             }
           }}
-          onOpenShare={(docId) => setShareDocId(docId)}
+          onOpenShare={(docId) => {
+            setShareDocId(docId);
+            setShareDocTitle(selectedDocForDetails?.title || '');
+          }}
           onOpenHistory={(docId, canEdit) => {
             setHistoryDocId(docId);
             setHistoryCanEdit(canEdit);

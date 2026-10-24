@@ -203,7 +203,7 @@ export type CreateVersionRequest = z.infer<typeof CreateVersionRequestSchema>;
 export const CreateGrantRequestSchema = z.object({
   granteeUsernameOrEmail: z.string().min(1, 'Grantee username or email is required').max(100),
   permission: z.enum(['read', 'edit']),
-  expiresInHours: z.coerce.number().int().min(1).max(8760).optional(), // Max 1 year
+  expiresInHours: z.coerce.number().int().min(0).max(8760).optional().nullable(), // 0 or null = never expires
 });
 
 export type CreateGrantRequest = z.infer<typeof CreateGrantRequestSchema>;
