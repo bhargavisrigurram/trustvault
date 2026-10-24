@@ -27,11 +27,13 @@ export async function getDb(): Promise<DbClient> {
 
   if (isValidDbUrl(dbUrl)) {
     if (!pool) {
+      const isCloudDb = typeof dbUrl === 'string' && (dbUrl.includes('supabase.co') || dbUrl.includes('amazonaws.com') || dbUrl.includes('sslmode=require'));
       pool = new pg.Pool({
         connectionString: dbUrl,
+        ssl: isCloudDb ? { rejectUnauthorized: false } : undefined,
         max: 20,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
+        connectionTimeoutMillis: 15000,
       });
     }
     return {
@@ -118,6 +120,16 @@ export async function transaction<T>(callback: (client: DbClient) => Promise<T>)
 export async function runMigrations(): Promise<void> {
   const db = await getDb();
   
+  // Check if initial schema tables already exist
+  try {
+    const check = await db.query("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'");
+    if (check.rows.length > 0) {
+      return;
+    }
+  } catch {
+    // If check fails, proceed with running migration files
+  }
+
   // Find migrations directory
   const possiblePaths = [
     path.resolve(process.cwd(), 'database/migrations'),
