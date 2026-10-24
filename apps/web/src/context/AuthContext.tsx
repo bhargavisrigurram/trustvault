@@ -52,10 +52,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (data: any) => {
     await api.register(data);
     // After registration, automatically login
-    await login({
-      usernameOrEmail: data.username,
-      password: data.password,
-    });
+    try {
+      await login({
+        usernameOrEmail: data.username,
+        password: data.password,
+      });
+    } catch (err: any) {
+      console.warn('Auto-login after registration could not complete:', err);
+      throw new Error('Account created! Please sign in with your credentials.');
+    }
   };
 
   const logout = async () => {

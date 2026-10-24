@@ -10,6 +10,7 @@ import {
   Sparkles,
   AlertCircle,
   Eye,
+  EyeOff,
   UserCheck,
 } from 'lucide-react';
 
@@ -28,6 +29,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const [isRegistering, setIsRegistering] = useState(initialMode === 'register');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     setIsRegistering(initialMode === 'register');
@@ -51,6 +54,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     try {
@@ -74,7 +78,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         onClose();
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Authentication failed. Please check credentials.');
+      const msg = err.message || 'Authentication failed. Please check credentials.';
+      if (msg.includes('Account created!')) {
+        setSuccessMessage(msg);
+        setIsRegistering(false);
+        setUsernameOrEmail(username);
+      } else {
+        setErrorMessage(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -135,6 +146,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               onClick={() => {
                 setIsRegistering(false);
                 setErrorMessage(null);
+                setSuccessMessage(null);
               }}
               className={`px-3 py-1 rounded-lg font-bold transition-all ${
                 !isRegistering
@@ -149,6 +161,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               onClick={() => {
                 setIsRegistering(true);
                 setErrorMessage(null);
+                setSuccessMessage(null);
               }}
               className={`px-3 py-1 rounded-lg font-bold transition-all ${
                 isRegistering
@@ -161,11 +174,35 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           </div>
         </div>
 
-        {/* Error Alert */}
+        {/* Success Alert */}
+        {successMessage && (
+          <div className="mb-4 p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 text-xs flex items-center space-x-2">
+            <UserCheck className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span>{successMessage}</span>
+          </div>
+        )}
+
+        {/* Error Alert with Quick Switch to Sign In if already registered */}
         {errorMessage && (
-          <div className="mb-4 p-2.5 rounded-xl bg-rose-950/80 border border-rose-800/80 text-rose-300 text-xs flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-            <span>{errorMessage}</span>
+          <div className="mb-4 p-2.5 rounded-xl bg-rose-950/80 border border-rose-800/80 text-rose-300 text-xs flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{errorMessage}</span>
+            </div>
+            {isRegistering && errorMessage.toLowerCase().includes('already exists') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUsernameOrEmail(username || email);
+                  setIsRegistering(false);
+                  setErrorMessage(null);
+                  setSuccessMessage('Account exists! Enter your password to sign in.');
+                }}
+                className="ml-2 px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 text-[11px] whitespace-nowrap shadow-sm"
+              >
+                Sign In Now →
+              </button>
+            )}
           </div>
         )}
 
@@ -183,7 +220,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     type="text"
                     required
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      if (errorMessage) setErrorMessage(null);
+                    }}
                     placeholder="e.g. sarah_security"
                     className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
                   />
@@ -200,7 +240,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                     type="email"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (errorMessage) setErrorMessage(null);
+                    }}
                     placeholder="sarah@company.com"
                     className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
                   />
@@ -233,7 +276,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   type="text"
                   required
                   value={usernameOrEmail}
-                  onChange={(e) => setUsernameOrEmail(e.target.value)}
+                  onChange={(e) => {
+                    setUsernameOrEmail(e.target.value);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   placeholder="admin, alice, bob, or email"
                   className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
                 />
@@ -241,7 +287,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             </div>
           )}
 
-          {/* Password */}
+          {/* Password with Show/Hide Toggle */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-[11px] font-semibold text-slate-300">Password</label>
@@ -255,13 +301,24 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
               <input
                 id="input-auth-password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 placeholder="••••••••••••"
-                className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
+                className="w-full pl-9 pr-10 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 transition-colors"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -277,7 +334,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           </button>
         </form>
 
-        {/* 1-Click Fast-Track Demo Logins (Clean compact pill bar) */}
+        {/* 1-Click Fast-Track Demo Logins (Clean compact pill bar with credentials) */}
         {!isRegistering && (
           <div className="mt-4 pt-3.5 border-t border-slate-800/80">
             <div className="flex items-center justify-between mb-2">
@@ -298,7 +355,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   <Shield className="w-3 h-3 text-purple-400" />
                   <span>Admin</span>
                 </div>
-                <span className="text-[9px] text-slate-500 font-normal">Audit & Scan</span>
+                <span className="text-[8.5px] text-slate-400 font-mono">Pass: AdminPass123!</span>
               </button>
 
               <button
@@ -311,7 +368,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   <UserCheck className="w-3 h-3 text-emerald-400" />
                   <span>Alice</span>
                 </div>
-                <span className="text-[9px] text-slate-500 font-normal">Owner (Files)</span>
+                <span className="text-[8.5px] text-slate-400 font-mono">Pass: AlicePass123!</span>
               </button>
 
               <button
@@ -324,7 +381,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                   <Eye className="w-3 h-3 text-teal-400" />
                   <span>Bob</span>
                 </div>
-                <span className="text-[9px] text-slate-500 font-normal">Viewer (404)</span>
+                <span className="text-[8.5px] text-slate-400 font-mono">Pass: BobPass123!</span>
               </button>
             </div>
           </div>

@@ -70,12 +70,18 @@ export const corsMiddleware = cors({
 export const loginRateLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.maxAttempts,
+  skipSuccessfulRequests: true, // Legitimate logins never consume brute-force quota
   skip: () => config.env === 'test' || process.env.NODE_ENV === 'test',
+  keyGenerator: (req) => {
+    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const target = req.body?.usernameOrEmail ? String(req.body.usernameOrEmail).toLowerCase().trim() : '';
+    return `${ip}:${target}`;
+  },
   message: {
     success: false,
     error: {
       code: 'TOO_MANY_REQUESTS',
-      message: 'Too many login attempts. Please try again later.',
+      message: 'Too many failed login attempts. Please wait a moment and try again.',
     },
   },
   standardHeaders: true,
