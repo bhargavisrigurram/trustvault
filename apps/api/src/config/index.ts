@@ -31,7 +31,7 @@ export const config = {
   },
 
   gemini: {
-    apiKey: process.env.GEMINI_API_KEY || '',
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    apiKey: (process.env.GEMINI_API_KEY || '').replace(/^["']|["']$/g, '').trim(),
+    model: (process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').replace(/^["']|["']$/g, '').trim(),
   },
 };

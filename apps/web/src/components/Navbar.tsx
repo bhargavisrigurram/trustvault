@@ -10,8 +10,8 @@ import {
 } from 'lucide-react';
 
 interface NavbarProps {
-  currentView: 'home' | 'documents' | 'admin-audit';
-  onNavigate: (view: 'home' | 'documents' | 'admin-audit') => void;
+  currentView: 'home' | 'documents' | 'admin-audit' | 'copilot';
+  onNavigate: (view: 'home' | 'documents' | 'admin-audit' | 'copilot') => void;
   onOpenAuth: (mode?: 'login' | 'register') => void;
   onOpenCopilot?: () => void;
 }
@@ -90,6 +90,21 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenA
             </button>
           )}
 
+          {user && (
+            <button
+              id="nav-copilot"
+              onClick={() => onNavigate('copilot')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                currentView === 'copilot'
+                  ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-700/60 shadow-sm'
+                  : 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-950/40'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>AI Copilot</span>
+            </button>
+          )}
+
           {user && isAdmin && (
             <button
               id="nav-admin-audit"
@@ -136,14 +151,18 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, onOpenA
           </div>
 
           {/* AI Copilot Quick Button - STRICTLY FOR LOGGED IN USERS ONLY */}
-          {user && onOpenCopilot && (
+          {user && (
             <button
               id="btn-nav-copilot"
-              onClick={onOpenCopilot}
-              className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-teal-950/70 border border-teal-800/80 hover:border-teal-500 text-teal-300 text-xs font-semibold shadow-sm transition-all hover:scale-105"
+              onClick={onOpenCopilot || (() => onNavigate('copilot'))}
+              className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-sm transition-all hover:scale-105 ${
+                currentView === 'copilot'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-cyan-500/25'
+                  : 'bg-teal-950/70 border border-teal-800/80 hover:border-teal-500 text-teal-300'
+              }`}
               title="Open Vault AI Copilot Assistant"
             >
-              <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+              <Sparkles className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">AI Copilot</span>
             </button>
           )}

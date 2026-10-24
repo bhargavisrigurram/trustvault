@@ -79,11 +79,25 @@ export const GlobalSecurityScanModal: React.FC<GlobalSecurityScanModalProps> = (
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const badge = scanResult ? getStatusBadge(scanResult.overallStatus) : null;
   const BadgeIcon = badge?.icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn"
+    >
       <div className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl">
         {/* Modal Header */}
         <div className="px-6 py-5 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between">

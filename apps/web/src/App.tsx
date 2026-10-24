@@ -5,12 +5,13 @@ import { HomePage } from './pages/HomePage';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AdminAuditPage } from './pages/AdminAuditPage';
+import { VaultCopilotPage } from './pages/VaultCopilotPage';
 import { VaultCopilotModal } from './components/VaultCopilotModal';
 import { Shield } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const { user, loading, isAdmin } = useAuth();
-  const [currentView, setCurrentView] = useState<'home' | 'documents' | 'admin-audit'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'documents' | 'admin-audit' | 'copilot'>('home');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [globalCopilotOpen, setGlobalCopilotOpen] = useState(false);
@@ -24,6 +25,30 @@ const MainLayout: React.FC = () => {
       }
     }
   }, [user]);
+
+  // Support Browser Back and Forward buttons seamlessly
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && e.state.view) {
+        setCurrentView(e.state.view);
+      } else {
+        setCurrentView(user ? 'documents' : 'home');
+      }
+      setGlobalCopilotOpen(false);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [user]);
+
+  const handleNavigate = (view: 'home' | 'documents' | 'admin-audit' | 'copilot') => {
+    if (view === 'admin-audit' && (!user || !isAdmin)) return;
+    if ((view === 'documents' || view === 'copilot') && !user) {
+      handleOpenAuth('login');
+      return;
+    }
+    window.history.pushState({ view }, '', `#${view}`);
+    setCurrentView(view);
+  };
 
   const handleOpenAuth = (mode?: 'login' | 'register') => {
     setAuthMode(mode || 'login');
@@ -49,23 +74,16 @@ const MainLayout: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-emerald-500/30 selection:text-emerald-200">
       <Navbar
         currentView={currentView}
-        onNavigate={(view) => {
-          if (view === 'admin-audit' && (!user || !isAdmin)) return;
-          if (view === 'documents' && !user) {
-            handleOpenAuth('login');
-            return;
-          }
-          setCurrentView(view);
-        }}
+        onNavigate={handleNavigate}
         onOpenAuth={handleOpenAuth}
-        onOpenCopilot={() => setGlobalCopilotOpen(true)}
+        onOpenCopilot={() => handleNavigate('copilot')}
       />
 
       <main className="flex-1">
         {currentView === 'home' && (
           <HomePage
             onOpenAuth={handleOpenAuth}
-            onNavigateToDashboard={() => setCurrentView('documents')}
+            onNavigateToDashboard={() => handleNavigate('documents')}
             isAuthenticated={!!user}
             username={user?.username}
           />
@@ -74,6 +92,14 @@ const MainLayout: React.FC = () => {
         {currentView === 'documents' && (
           user ? (
             <DashboardPage />
+          ) : (
+            <AuthPage initialMode="login" />
+          )
+        )}
+
+        {currentView === 'copilot' && (
+          user ? (
+            <VaultCopilotPage onBack={() => handleNavigate('documents')} />
           ) : (
             <AuthPage initialMode="login" />
           )
@@ -93,10 +119,11 @@ const MainLayout: React.FC = () => {
         />
       )}
 
-      {/* Global Vault AI Copilot Assistant - STRICTLY FOR LOGGED IN USERS ONLY */}
-      {user && (
+      {/* Modal fallback if triggered directly with document context */}
+      {user && globalCopilotOpen && (
         <VaultCopilotModal
           isOpen={globalCopilotOpen}
+          isModal={true}
           onClose={() => setGlobalCopilotOpen(false)}
         />
       )}
